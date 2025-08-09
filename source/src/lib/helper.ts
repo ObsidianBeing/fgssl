@@ -5,7 +5,7 @@ export async function generateUnsubscribeLink(subscriptionId: string, email: str
     // Create a secure token that expires in 7 days
     const token = await createExpiringToken(subscriptionId, email);
 
-    return `${process.env.NEXT_PUBLIC_SITE_URL}/api/cancel-subscription?token=${token}&sub=${encodeURIComponent(subscriptionId)}`;
+    return `${process.env.NEXT_PUBLIC_SITE_URL}/api/stripe/cancel-subscription?token=${token}&sub=${encodeURIComponent(subscriptionId)}`;
 }
 
 export async function createExpiringToken(subscriptionId: string, email: string): Promise<string> {
