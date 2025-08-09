@@ -25,6 +25,13 @@ const authConfig: NextAuthConfig = {
         error: "/auth/login",
     },
     callbacks: {
+        async redirect({ url, baseUrl }) {
+            // Allows relative callback URLs
+            if (url.startsWith("/")) return `${baseUrl}${url}`
+            // Allows callback URLs on the same origin
+            else if (new URL(url).origin === baseUrl) return url
+            return baseUrl + "/dashboard"
+        },
         async signIn({ user, account, profile }) {
             console.log("SignIn Callback:", { user, account, profile });
             try {
@@ -89,7 +96,7 @@ const authConfig: NextAuthConfig = {
                             type: account.type,
                             access_token: account.access_token || null,
                             expires_at: account.expires_at || null,
-                            expires_att: account.expires_at ? new Date(account.expires_at * 1000).toISOString() : null,
+                            expires_at_timestamp: account.expires_at || null,
                             token_type: account.token_type || null,
                             scope: account.scope || null,
                             id_token: account.id_token || null,
@@ -111,27 +118,46 @@ const authConfig: NextAuthConfig = {
             }
         },
         async jwt({ token, user }) {
-            if (user?.email) {
-                const dbUser = await xata.db.users
-                    .filter({ email: user.email })
-                    .getFirst();
+            console.log("JWT Callback:", { token, user });
+            try {
+                if (user?.email) {
+                    console.log("Fetching user from database for JWT:", user.email);
+                    const dbUser = await xata.db.users
+                        .filter({ email: user.email })
+                        .getFirst();
 
-                if (dbUser) {
-                    token.id = dbUser.xata_id;
-                    token.role = dbUser.role;
-                    token.email = dbUser.email;
-                    token.name = dbUser.name;
-                    token.picture = dbUser.image;
+                    if (dbUser) {
+                        console.log("User found in database:", dbUser.xata_id);
+                        token.id = dbUser.xata_id;
+                        token.role = dbUser.role;
+                        token.email = dbUser.email;
+                        token.name = dbUser.name;
+                        token.picture = dbUser.image;
+                    } else {
+                        console.log("User not found in database");
+                    }
                 }
+                return token;
+            } catch (error) {
+                console.error("JWT Callback Error:", error);
+                return token;
             }
-            return token;
         },
         async session({ session, token }) {
-            if (session.user && token.id && token.role) {
-                session.user.id = token.id;
-                session.user.role = token.role;
+            console.log("Session Callback:", { session, token });
+            try {
+                if (session.user && token.id && token.role) {
+                    session.user.id = token.id;
+                    session.user.role = token.role;
+                    console.log("Session updated with user data:", session.user);
+                } else {
+                    console.log("Missing token data for session:", { tokenId: token.id, tokenRole: token.role });
+                }
+                return session;
+            } catch (error) {
+                console.error("Session Callback Error:", error);
+                return session;
             }
-            return session;
         },
     },
     session: {
