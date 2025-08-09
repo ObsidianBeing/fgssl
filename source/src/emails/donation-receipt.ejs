@@ -209,6 +209,13 @@
                     Thank you for your faithful support!
                 </div>
 
+                <% if (isRecurring && unsubscribeLink) { %>
+                    <p style="text-align: center; margin: 10px 0 20px;">
+                        You can manage or cancel your recurring donation at any time here:
+                        <a href="<%= unsubscribeLink %>">Unsubscribe</a>
+                    </p>
+                <% } %>
+
                 <% if (receiptUrl) { %>
                     <div style="text-align: center;">
                         <a href="<%= receiptUrl %>" class="receipt-btn">Download Official Receipt</a>
