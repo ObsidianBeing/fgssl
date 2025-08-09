@@ -20,16 +20,9 @@ const SignInPage = () => {
         setError(null);
         
         try {
-            const result = await signIn(provider, { 
-                redirect: false,
+            await signIn(provider, { 
                 callbackUrl: '/dashboard' 
             });
-
-            if (result?.error) {
-                setError(result.error);
-            } else if (result?.ok) {
-                router.push('/dashboard');
-            }
         } catch (err) {
             setError('An unexpected error occurred');
             console.error(err);

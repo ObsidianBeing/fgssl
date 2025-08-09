@@ -41,20 +41,10 @@ export default function LoginPage() {
       setError(null)
       setProvider(provider)
 
-      const result = await signIn(provider, {
+      await signIn(provider, {
         callbackUrl,
-        redirect: false,
+        // Let NextAuth handle redirects for OAuth providers
       })
-
-      if (result?.error) {
-        setError('Authentication failed. Please try again.')
-      } else if (result?.ok) {
-        // Check session and redirect
-        const session = await getSession()
-        if (session) {
-          router.push(callbackUrl)
-        }
-      }
     } catch (err) {
       console.error('Sign in error:', err)
       setError('An unexpected error occurred. Please try again.')

@@ -138,7 +138,7 @@ const authConfig: NextAuthConfig = {
         strategy: "jwt",
         maxAge: 24 * 60 * 60, // 24 hours
     },
-    secret: process.env.NEXTAUTH_SECRET,
+    secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET, 
     debug: process.env.NODE_ENV === "development",
 };
 
