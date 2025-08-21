@@ -42,7 +42,7 @@ export default async function EditBlogPost({ params }: Props) {
             <BlogEditor
                 // pass server action reference (not an inline arrow) — we defined handleSubmit above
                 onSubmit={handleSubmit}
-                title={blogPost.title ?? ''}
+                //title={blogPost.title ?? ''}
                 content={blogPost.content ?? ''}
                 excerpt={blogPost.excerpt ?? ''}
                 status={blogPost.status ?? 'draft'}
