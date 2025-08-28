@@ -1,3 +1,4 @@
+// app/dashboard/layout.tsx
 import type { Metadata } from 'next';
 import { Inter, Montserrat } from 'next/font/google';
 import '@/styles/globals.css';
@@ -13,7 +14,11 @@ export const metadata: Metadata = {
     description: 'Administrative dashboard for church management',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardRootLayout({
+    children
+}: {
+    children: React.ReactNode
+}) {
     return (
         <html lang="en" suppressHydrationWarning>
             <body

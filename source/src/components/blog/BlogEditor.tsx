@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 'use client'
 
@@ -16,6 +17,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import dynamic from 'next/dynamic'
+import Image from 'next/image'
 
 // third-party libs assumed available
 import ReactMarkdown from 'react-markdown'
@@ -38,16 +40,7 @@ interface BlogEditorProps {
     defaultValues: BlogEditorDefaultValues
     autosaveIntervalMs?: number // how often to autosave to server/local
     onSubmit: (formData: FormData) => Promise<void>
-    
 }
-
-// client-only ImageKit wrapper import (keeps same signature as original)
-import Upload from 'imagekit-javascript'
-
-const imagekit = new Upload({
-    publicKey: process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY || '',
-    urlEndpoint: process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT || '',
-})
 
 const EXCERPT_LIMIT = 300
 const META_DESC_LIMIT = 160
@@ -59,6 +52,8 @@ export default function BlogEditor({ action, defaultValues, autosaveIntervalMs =
     const [previewMode, setPreviewMode] = useState(false)
     const [saving, setSaving] = useState(false)
     const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null)
+    const [imagekitInstance, setImagekitInstance] = useState<any>(null)
+    const [imagekitReady, setImagekitReady] = useState(false)
 
     const [title, setTitle] = useState(defaultValues.title || '')
     const [excerpt, setExcerpt] = useState(defaultValues.excerpt || '')
@@ -80,6 +75,39 @@ export default function BlogEditor({ action, defaultValues, autosaveIntervalMs =
         return `blog-draft:${safeTitle}`
     }, [title])
 
+    // Initialize ImageKit on client side only
+    useEffect(() => {
+        if (typeof window === 'undefined') return
+
+        const initImageKit = async () => {
+            try {
+                // Check for required environment variables
+                const publicKey = process.env.NEXT_PUBLIC_IMAGEKIT_PUBLIC_KEY
+                const urlEndpoint = process.env.NEXT_PUBLIC_IMAGEKIT_URL_ENDPOINT
+
+                if (!publicKey || !urlEndpoint) {
+                    console.warn('ImageKit environment variables not found. Image upload will be disabled.')
+                    return
+                }
+
+                // Dynamic import to prevent SSR issues
+                const { default: Upload } = await import('imagekit-javascript')
+
+                const imagekit = new Upload({
+                    publicKey,
+                    urlEndpoint,
+                })
+
+                setImagekitInstance(imagekit)
+                setImagekitReady(true)
+            } catch (error) {
+                console.error('Failed to initialize ImageKit:', error)
+            }
+        }
+
+        initImageKit()
+    }, [])
+
     const editor = useEditor({
         extensions: [
             StarterKit,
@@ -92,23 +120,37 @@ export default function BlogEditor({ action, defaultValues, autosaveIntervalMs =
 
     // upload helper using ImageKit auth endpoint
     const uploadImage = async (file: File): Promise<string> => {
-        // Fetch authentication parameters from your backend
-        const authRes = await fetch('/api/imagekit-auth')
-        if (!authRes.ok) throw new Error('Failed to get image auth')
-        const { signature, token, expire } = await authRes.json()
+        if (!imagekitInstance || !imagekitReady) {
+            throw new Error('ImageKit not initialized. Please check your environment variables.')
+        }
 
-        const res = await imagekit.upload({
-            file,
-            fileName: file.name,
-            folder: '/blog-images',
-            signature,
-            token,
-            expire,
-        })
-        return res.url
+        try {
+            // Fetch authentication parameters from your backend
+            const authRes = await fetch('/api/imagekit-auth')
+            if (!authRes.ok) throw new Error('Failed to get image auth')
+            const { signature, token, expire } = await authRes.json()
+
+            const res = await imagekitInstance.upload({
+                file,
+                fileName: file.name,
+                folder: '/blog-images',
+                signature,
+                token,
+                expire,
+            })
+            return res.url
+        } catch (error) {
+            console.error('Upload failed:', error)
+            throw error
+        }
     }
 
     const addImageToContent = () => {
+        if (!imagekitReady) {
+            alert('Image upload is not available. Please check your configuration.')
+            return
+        }
+
         const fileChoice = window.prompt('Image URL or type `file` to upload from device?')
         if (fileChoice === 'file') {
             const input = document.createElement('input')
@@ -122,7 +164,7 @@ export default function BlogEditor({ action, defaultValues, autosaveIntervalMs =
                         editor.chain().focus().setImage({ src: url }).run()
                     } catch (err) {
                         console.error('Upload failed', err)
-                        alert('Image upload failed')
+                        alert('Image upload failed: ' + (err instanceof Error ? err.message : 'Unknown error'))
                     }
                 }
             }
@@ -133,6 +175,11 @@ export default function BlogEditor({ action, defaultValues, autosaveIntervalMs =
     }
 
     const handleFeaturedUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!imagekitReady) {
+            alert('Image upload is not available. Please check your configuration.')
+            return
+        }
+
         const f = e.target.files?.[0]
         if (f) {
             try {
@@ -140,7 +187,7 @@ export default function BlogEditor({ action, defaultValues, autosaveIntervalMs =
                 setFeaturedImageUrl(url)
             } catch (err) {
                 console.error('Featured upload failed', err)
-                alert('Featured image upload failed')
+                alert('Featured image upload failed: ' + (err instanceof Error ? err.message : 'Unknown error'))
             }
         }
     }
@@ -176,6 +223,8 @@ export default function BlogEditor({ action, defaultValues, autosaveIntervalMs =
 
     // --- Autosave (localStorage) ---
     useEffect(() => {
+        if (typeof window === 'undefined') return
+
         // load from autosave when key changes
         const raw = localStorage.getItem(autosaveKey)
         if (raw) {
@@ -201,6 +250,8 @@ export default function BlogEditor({ action, defaultValues, autosaveIntervalMs =
     }, [autosaveKey])
 
     useEffect(() => {
+        if (typeof window === 'undefined') return
+
         const id = setInterval(() => {
             // client-side autosave to localStorage
             const payload = {
@@ -291,7 +342,9 @@ export default function BlogEditor({ action, defaultValues, autosaveIntervalMs =
             await action(form)
             setSaving(false)
             // on success, clear local autosave for this key
-            localStorage.removeItem(autosaveKey)
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem(autosaveKey)
+            }
         } catch (err) {
             setSaving(false)
             console.error(err)
@@ -307,7 +360,10 @@ export default function BlogEditor({ action, defaultValues, autosaveIntervalMs =
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-semibold">New Post</h2>
-                    <div className="text-sm text-gray-500">Autosave: {lastSavedAt ? `${lastSavedAt.toLocaleTimeString()}` : 'not saved yet'}{saving ? ' • saving…' : ''}</div>
+                    <div className="text-sm text-gray-500">
+                        Autosave: {lastSavedAt ? `${lastSavedAt.toLocaleTimeString()}` : 'not saved yet'}{saving ? ' • saving…' : ''}
+                        {!imagekitReady && <span className="text-orange-500 ml-2">• Image upload unavailable</span>}
+                    </div>
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="ghost" type="button" onClick={() => serverSaveDraft()}>{saving ? 'Saving…' : 'Save draft'}</Button>
@@ -353,13 +409,27 @@ export default function BlogEditor({ action, defaultValues, autosaveIntervalMs =
                     <div>
                         <Label htmlFor="featuredImage">Featured Image</Label>
                         {featuredImageUrl ? (
-                            <div className="relative h-48 w-full rounded bg-gray-200 overflow-hidden">
-                                <img src={featuredImageUrl} className="h-full w-full object-cover" alt="featured" />
+                            <div>
+                                <Image
+                                    src={featuredImageUrl}
+                                    alt="featured"
+                                    className="h-full w-full object-cover"
+                                    fill
+                                    sizes="(max-width: 768px) 100vw, 33vw"
+                                    style={{ objectFit: 'cover' }}
+                                />
                             </div>
                         ) : (
                             <div className="border-dashed border-2 border-gray-300 h-48 rounded flex items-center justify-center text-gray-400">No image selected</div>
                         )}
-                        <input type="file" accept="image/*" onChange={handleFeaturedUpload} className="mt-2 block w-full" />
+                        <input
+                            type="file"
+                            accept="image/*"
+                            onChange={handleFeaturedUpload}
+                            className="mt-2 block w-full"
+                            disabled={!imagekitReady}
+                        />
+                        {!imagekitReady && <p className="text-sm text-orange-500 mt-1">Image upload disabled - check ImageKit configuration</p>}
                         <input type="hidden" name="featuredImage" value={featuredImageUrl} />
                     </div>
 

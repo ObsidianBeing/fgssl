@@ -3,25 +3,40 @@ import { connectMongoDB } from '@/lib/mongodb';
 import Appointment from '@/models/Appointment';
 
 export async function GET(
-    _req: Request,
-    { params }: { params: { id: string } }
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
 ) {
-    await connectMongoDB();
-    const appointment = await Appointment.findById(params.id);
-    if (!appointment) {
-        return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });
+    try {
+        await connectMongoDB();
+
+        // Await the params since they're now a Promise in Next.js 15
+        const { id } = await params;
+
+        const appointment = await Appointment.findById(id);
+
+        if (!appointment) {
+            return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });
+        }
+
+        return NextResponse.json(appointment);
+    } catch (error) {
+        console.error('Error fetching appointment:', error);
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        );
     }
-    return NextResponse.json(appointment);
 }
 
 export async function PATCH(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     await connectMongoDB();
     const data = await req.json();
+    const { id } = await params;
     const updated = await Appointment.findByIdAndUpdate(
-        params.id,
+        id,
         { ...data, updatedAt: new Date().toISOString() },
         { new: true }
     );
@@ -33,10 +48,11 @@ export async function PATCH(
 
 export async function DELETE(
     _req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     await connectMongoDB();
-    const deleted = await Appointment.findByIdAndDelete(params.id);
+    const { id } = await params;
+    const deleted = await Appointment.findByIdAndDelete(id);
     if (!deleted) {
         return NextResponse.json({ error: 'Appointment not found' }, { status: 404 });
     }

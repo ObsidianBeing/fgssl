@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
@@ -7,7 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { User, Users, DollarSign, BarChart3, Settings, Shield, Activity, LogOut, Calendar } from 'lucide-react';
+import { User as UserReact, Users, DollarSign, BarChart3, Settings, Shield, Activity, LogOut, Calendar, Bell, Search, Menu } from 'lucide-react';
+import { connectMongoDB } from '@/lib/mongodb';
+import Donation from '@/models/Donation';
+import User from '@/models/User';
+import  { MenuItemModel } from '@/models/MenuItem';
 
 interface DashboardCard {
   title: string;
@@ -18,36 +23,35 @@ interface DashboardCard {
   count?: number;
 }
 
-const adminCards: DashboardCard[] = [
-  {
-    title: 'Users Management',
-    description: 'Manage user accounts and permissions',
-    href: '/dashboard/users',
-    icon: Users,
-    roles: ['admin'],
-  },
-  {
-    title: 'Donations Overview',
-    description: 'View and manage donations',
-    href: '/dashboard/donations',
-    icon: DollarSign,
-    roles: ['admin', 'manager'],
-  },
-  {
-    title: 'Analytics & Reports',
-    description: 'View detailed analytics and generate reports',
-    href: '/dashboard/analytics',
-    icon: BarChart3,
-    roles: ['admin', 'manager'],
-  },
-  {
-    title: 'Settings',
-    description: 'Configure application settings',
-    href: '/dashboard/settings',
-    icon: Settings,
-    roles: ['admin', 'manager'],
-  },
-];
+// Function to get menu items based on role
+async function getMenuItems(role: string) {
+  await connectMongoDB();
+  return await MenuItemModel.find({ roles: role, enabled: true }).sort({ order: 1 });
+}
+
+// Function to get user donations
+async function getUserDonations(userId: string) {
+  await connectMongoDB();
+  const donations = await Donation.find({ userId }).sort({ date: -1 });
+  const total = donations.reduce((sum, donation) => sum + donation.amount, 0);
+  return { donations, total };
+}
+
+// Function to get dashboard stats for admin/manager
+async function getDashboardStats() {
+  await connectMongoDB();
+  const userCount = await User.countDocuments();
+  const donationCount = await Donation.countDocuments();
+  const totalDonations = await Donation.aggregate([
+    { $group: { _id: null, total: { $sum: '$amount' } } }
+  ]);
+
+  return {
+    userCount,
+    donationCount,
+    totalDonations: totalDonations[0]?.total || 0
+  };
+}
 
 function getRoleColor(role: string) {
   switch (role) {
@@ -58,26 +62,67 @@ function getRoleColor(role: string) {
   }
 }
 
-function getRolePermissions(role: string) {
-  switch (role) {
-    case 'admin': return ['Full system access', 'User management', 'All donations', 'System settings'];
-    case 'manager': return ['Donation management', 'Analytics access', 'Report generation', 'Settings'];
-    case 'member': return ['Profile access', 'View activity', 'Basic dashboard'];
-    default: return ['Limited access'];
-  }
-}
-
 export default async function DashboardPage() {
   const session = await auth();
   if (!session) redirect('/login');
 
   const userRole = session.user?.role || 'member';
+  const userId = session.user?.id;
 
-  // Admin/Manager cards
-  const accessibleCards = adminCards.filter(card => card.roles.includes(userRole));
+  // Fetch data based on role
+  let menuItems: any[] = [];
+  let totalDonated = 0;
+  let dashboardStats = null;
+  let adminCards: any[] = [];
 
-  // Dummy member donations, replace with real DB call
-  const totalDonated = userRole === 'member' ? 125.5 : 0;
+  try {
+    // Get menu items for this role
+    menuItems = await getMenuItems(userRole);
+
+    if (userRole === 'member' && userId) {
+      const donationData = await getUserDonations(userId);
+      totalDonated = donationData.total;
+    } else if (userRole === 'admin' || userRole === 'manager') {
+      dashboardStats = await getDashboardStats();
+
+      // Admin/Manager cards with real counts
+      adminCards = [
+        {
+          title: 'Users Management',
+          description: 'Manage user accounts and permissions',
+          href: '/dashboard/users',
+          icon: Users,
+          roles: ['admin'],
+          count: dashboardStats.userCount,
+        },
+        {
+          title: 'Donations Overview',
+          description: 'View and manage donations',
+          href: '/dashboard/donations',
+          icon: DollarSign,
+          roles: ['admin', 'manager'],
+          count: dashboardStats.donationCount,
+        },
+        {
+          title: 'Analytics & Reports',
+          description: 'View detailed analytics and generate reports',
+          href: '/dashboard/analytics',
+          icon: BarChart3,
+          roles: ['admin', 'manager'],
+        },
+        {
+          title: 'Settings',
+          description: 'Configure application settings',
+          href: '/dashboard/settings',
+          icon: Settings,
+          roles: ['admin', 'manager'],
+        },
+      ].filter(card => card.roles.includes(userRole));
+    }
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    // Handle error (e.g., show error message to user)
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -92,8 +137,17 @@ export default async function DashboardPage() {
               </Badge>
             </div>
             <div className="flex items-center space-x-4">
+              <Button variant="ghost" size="icon">
+                <Search className="h-5 w-5" />
+              </Button>
+              <Button variant="ghost" size="icon" className="relative">
+                <Bell className="h-5 w-5" />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full text-xs w-4 h-4 flex items-center justify-center">
+                  3
+                </span>
+              </Button>
               <div className="text-sm text-gray-600 flex items-center gap-2">
-                {userRole === 'member' && session.user?.image && (
+                {session.user?.image && (
                   <Image
                     src={session.user.image}
                     alt="avatar"
@@ -116,7 +170,7 @@ export default async function DashboardPage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Role-specific welcome card */}
+        {/* Role-specific content */}
         {userRole === 'member' ? (
           <Card>
             <CardHeader>
@@ -152,20 +206,25 @@ export default async function DashboardPage() {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Shield className="h-5 w-5 text-blue-600" />
-                <span>Admin / Manager Dashboard</span>
+                <span>{userRole === 'admin' ? 'Admin' : 'Manager'} Dashboard</span>
               </CardTitle>
               <CardDescription>
                 You have <strong>{userRole}</strong> privileges
               </CardDescription>
             </CardHeader>
             <CardContent className="grid md:grid-cols-2 gap-6">
-              {accessibleCards.map(card => (
+              {adminCards.map(card => (
                 <Link key={card.href} href={card.href}>
                   <Card className="hover:shadow-md transition-shadow cursor-pointer">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
                         <card.icon className="h-5 w-5 text-blue-600" />
                         {card.title}
+                        {card.count !== undefined && (
+                          <Badge variant="secondary" className="ml-auto">
+                            {card.count}
+                          </Badge>
+                        )}
                       </CardTitle>
                       <CardDescription>{card.description}</CardDescription>
                     </CardHeader>
@@ -178,13 +237,32 @@ export default async function DashboardPage() {
 
         <Separator />
 
-        {/* Quick Actions - same for all roles */}
+        {/* Navigation Menu based on role */}
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Menu className="h-5 w-5" /> Navigation
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {menuItems.map(item => (
+              <Button key={item._id} variant="outline" className="h-16 justify-start" asChild>
+                <Link href={item.path}>
+                  {item.icon && <item.icon className="h-5 w-5 mr-2" />}
+                  {item.title}
+                </Link>
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <Separator />
+
+        {/* Quick Actions */}
         <div>
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Button variant="outline" className="h-16" asChild>
               <Link href="/dashboard/profile">
-                <User className="h-5 w-5 mr-2" /> Edit Profile
+                <UserReact className="h-5 w-5 mr-2" /> Edit Profile
               </Link>
             </Button>
             {(userRole === 'admin' || userRole === 'manager') && (

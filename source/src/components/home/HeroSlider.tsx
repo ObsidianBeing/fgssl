@@ -17,7 +17,7 @@ const slides = [
     title: "The Ethiopian Full Gospel Belivers Church (Silver Spring Local)",
     subtitle: "የኢትዮጵያ ሙሉ ወንጌል አማኞች ቤተ ክርስቲያን (ሲልቨር ስፕሪንግ አጥቢያ)",
     buttonText: "Join Us Sunday",
-    buttonLink: "/login",
+    buttonLink: "/",
   },
   {
     id: 2,
@@ -25,7 +25,7 @@ const slides = [
     title: "Experience Worship",
     subtitle: "Connect with God and fellow believers",
     buttonText: "Service Times",
-    buttonLink: "/login",
+    buttonLink: "/",
   },
   {
     id: 3,

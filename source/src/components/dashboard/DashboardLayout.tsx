@@ -1,7 +1,8 @@
+// components/dashboard/DashboardLayout.tsx
 'use client';
 
 import { useState } from 'react';
-import { Sidebar } from './Sidebar';
+import { SidebarServer } from './Sidebar.server';
 import { Navbar } from './NavBar';
 
 interface DashboardLayoutProps {
@@ -12,15 +13,16 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
     return (
-        <div className="flex h-screen overflow-hidden">
+        <div className="flex h-screen overflow-hidden bg-background">
             {/* Desktop Sidebar */}
-            <Sidebar className="hidden md:block" />
+            <div className="hidden md:block">
+                <SidebarServer />
+            </div>
 
             {/* Mobile Sidebar */}
-            <Sidebar
-                className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-card border-r border-border transition-transform duration-300 md:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-                    }`}
-            />
+            <div className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 md:hidden ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <SidebarServer />
+            </div>
 
             {/* Overlay when mobile sidebar open */}
             {sidebarOpen && (
@@ -32,8 +34,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
             <div className="flex flex-col flex-1 overflow-hidden">
                 <Navbar onMenuToggle={() => setSidebarOpen(!sidebarOpen)} />
-
-                <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
+                <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-muted/20">
+                    {children}
+                </main>
             </div>
         </div>
     );

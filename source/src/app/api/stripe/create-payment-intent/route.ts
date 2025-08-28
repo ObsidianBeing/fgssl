@@ -38,12 +38,19 @@ export async function POST(request: Request) {
         const amountInCents = Math.round(amountInDollars * 100);
         if (amountInCents <= 0) {
             console.error('❌ Amount too small after conversion:', amountInCents);
-            throw new Error('Amount must be at least $0.01');
+            throw new Error('Amount must be at least $0.50');
         }
+
         console.log(`✅ Amount validated: ${amountInDollars} dollars → ${amountInCents} cents`);
 
         // Validate currency (lowercase for Stripe)
         const lowerCurrency = currency.toLowerCase();
+        if (lowerCurrency === 'usd' && amountInCents < 50) {
+            console.error('❌ Amount below Stripe minimum for USD:', amountInCents);
+            throw new Error('Amount must be at least $0.50');
+        }
+
+        console.log(`✅ Amount validated: ${amountInDollars} dollars → ${amountInCents} cents`);
 
         console.log('💳 Creating PaymentIntent...');
         const paymentIntent = await stripe.paymentIntents.create({

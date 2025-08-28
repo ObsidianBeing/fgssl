@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed:menu": "tsx scripts/seedMenuItems.ts"
   },
   "dependencies": {
     "@auth/core": "^0.40.0",
@@ -71,6 +72,7 @@
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "dependencies": "^0.0.1",
+    "dotenv": "^17.2.1",
     "ejs": "^3.1.10",
     "embla-carousel-react": "^8.6.0",
     "formidable": "^3.5.4",
@@ -134,6 +136,8 @@
     "eslint-config-next": "15.3.3",
     "postcss": "^8.4.30",
     "tailwindcss": "^3.3.3",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.20.4",
     "typescript": "^5"
   }
 }

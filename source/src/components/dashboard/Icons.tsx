@@ -1,17 +1,25 @@
 import {
     Sun, Moon, Menu, Bell, User, Settings, LogOut,
     Heart, Repeat, CalendarCheck, Mail, TrendingUp,
-    Plus, CalendarPlus, FileText, Monitor
+    Plus, CalendarPlus, FileText, Monitor, BarChart3
 } from 'lucide-react';
 
+
 export const Icons = {
+    // dashboard: LayoutDashboard, // Removed duplicate property
+    //calendar: Calendar,
+    //message: MessageSquare,
+    bell: Bell,
+    //donate: DollarSign,
+    //users: Users,
+    settings: Settings,
+    fileText: FileText,
+    barChart: BarChart3,
+    menu: Menu,
     sun: Sun,
     moon: Moon,
-    menu: Menu,
-    bell: Bell,
     user: User,
     monitor: Monitor,
-    settings: Settings,
     logout: LogOut,
     heart: Heart,
     repeat: Repeat,
@@ -20,7 +28,6 @@ export const Icons = {
     trendingUp: TrendingUp,
     plus: Plus,
     calendarPlus: CalendarPlus,
-    fileText: FileText,
     logo: ({ className }: { className?: string }) => (
         <svg viewBox="0 0 24 24" fill="currentColor" className={`h-6 w-6 ${className}`}>
             <path d="M12 2L4 7v10l8 5 8-5V7l-8-5z" />

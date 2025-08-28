@@ -92,10 +92,10 @@ export function DonationForm({ donationTypes }: { donationTypes: DonationType[] 
         setIsSubmitting(true)
         try {
             const parsedAmount = Math.round(Number(values.amount))
-            if (isNaN(parsedAmount) || parsedAmount < 0.10) {
+            if (isNaN(parsedAmount) || parsedAmount < 0.50) {
                 toast({
                     title: "Invalid amount",
-                    description: "Amount must be at least $0.10",
+                    description: "Amount must be at least $0.50",
                     variant: "destructive"
                 })
                 return
@@ -274,7 +274,7 @@ export function DonationForm({ donationTypes }: { donationTypes: DonationType[] 
                                                             <Input
                                                                 {...field}
                                                                 type="number"
-                                                                min="1"
+                                                                min="0.50"
                                                                 step="0.01"
                                                                 className="pl-8 h-12"
                                                                 placeholder="Other amount"
@@ -359,7 +359,33 @@ export function DonationForm({ donationTypes }: { donationTypes: DonationType[] 
                                 transition={{ duration: 0.2 }}
                                 key="payment"
                             >
-                                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                                <Elements stripe={stripePromise} options={{
+                                    clientSecret,
+                                    appearance: {
+                                        theme: 'flat', // or 'night' or custom
+                                        variables: {
+                                            fontFamily: 'Arial, sans-serif',
+                                            fontSizeBase: '16px',
+                                        },
+                                        rules: {
+                                            '.Input': {
+                                                fontFamily: 'monospace',
+                                                fontVariantNumeric: 'lining-nums',
+                                            },
+                                            '.Input--cardNumber': {
+                                                // Mask digits visually using bullets instead of numbers
+                                                WebkitTextSecurity: 'disc', // Works in Chrome/Safari
+                                                MozTextSecurity: 'disc', // Experimental in Firefox
+                                                textSecurity: 'disc', // Some browsers
+                                            },
+                                            '.Input--cardCvc': {
+                                                WebkitTextSecurity: 'disc',
+                                                MozTextSecurity: 'disc',
+                                                textSecurity: 'disc',
+                                            },
+                                        },
+                                    },
+                                }}>
                                     <PaymentForm
                                         email={form.getValues('email')}
                                         setIsSubmitting={setIsSubmitting}

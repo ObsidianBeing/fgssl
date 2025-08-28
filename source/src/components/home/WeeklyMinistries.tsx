@@ -1,83 +1,113 @@
 "use client"
 
-import { Calendar, Clock, MapPin } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Calendar, Clock, MapPin, Phone } from "lucide-react"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 
-const ministryItems = [
+type MinistryItem = {
+  id: number
+  title: string
+  amharicTitle?: string
+  day: string
+  amharicDay?: string
+  time: string
+  location: string
+  category: string
+  description?: string
+  amharicDescription?: string
+  phone?: string
+}
+
+const ministryItems: MinistryItem[] = [
   {
     id: 1,
-    title: "Sunday Worship Service",
-    day: "Sunday",
-    time: "9:00 AM & 11:00 AM",
-    location: "Main Sanctuary",
-    description: "Join us for worship, prayer, and an inspiring message from our pastor.",
-    category: "worship"
+    title: "Early Morning Teleconference Prayer",
+    amharicTitle: "የማለዳ ፀሎት (በቴሌ ኮንፍራንስ)",
+    day: "Monday & Thursday",
+    amharicDay: "ሰኞ እና ሐሙስ",
+    time: "5:00 AM – 6:00 AM",
+    location: "Teleconference",
+    category: "prayer",
+    phone: "https://meetings.dialpad.com/room/efgbcssl",
   },
   {
     id: 2,
-    title: "Wednesday Bible Study",
-    day: "Wednesday",
-    time: "7:00 PM",
-    location: "Fellowship Hall",
-    description: "A deeper study of scripture in a smaller group setting.",
-    category: "study"
+    title: "Prayer (Teleconference)",
+    amharicTitle: "የፀሎት ጊዜ (በቴሌ ኮንፍራንስ)",
+    day: "Tuesday",
+    amharicDay: "ማክሰኞ",
+    time: "7:00 PM – 9:00 PM",
+    location: "Teleconference",
+    category: "prayer",
+    phone: "https://meetings.dialpad.com/room/efgbcssl"
   },
   {
     id: 3,
-    title: "Youth Group",
-    day: "Friday",
-    time: "6:30 PM",
-    location: "Youth Center",
-    description: "For teens to connect, have fun, and grow in their faith.",
-    category: "youth"
+    title: "Prayer & Word of God",
+    amharicTitle: "የፀሎት እና ተከታታይ ትምህርቶች",
+    day: "Wednesday",
+    amharicDay: "ዕረቡ",
+    time: "7:00 PM – 9:00 PM",
+    location: "Church Sanctuary",
+    category: "study",
   },
   {
     id: 4,
-    title: "Children's Church",
+    title: "Worship Service",
+    amharicTitle: "የአምልኮ ፕሮግራም",
     day: "Sunday",
-    time: "9:00 AM & 11:00 AM",
-    location: "Children's Wing",
-    description: "Age-appropriate worship and Bible lessons for children.",
-    category: "children"
+    amharicDay: "እሁድ",
+    time: "10:00 AM – 1:00 PM",
+    location: "Church Sanctuary",
+    category: "worship",
   },
   {
     id: 5,
-    title: "Prayer Meeting",
-    day: "Tuesday",
-    time: "6:00 AM",
-    location: "Prayer Room",
-    description: "Early morning prayer gathering to lift up community needs.",
-    category: "prayer"
+    title: "Prayer & Consultation",
+    amharicTitle: "የማማከር እና የፀሎት አገልግሎት",
+    day: "Monday",
+    amharicDay: "ሰኞ",
+    time: "2:00 PM – 4:00 PM",
+    location: "Church Sanctuary / Prayer Room",
+    category: "consultation",
   },
   {
     id: 6,
-    title: "Young Adults Fellowship",
-    day: "Thursday",
-    time: "7:30 PM",
-    location: "Multipurpose Room",
-    description: "For young adults to connect and grow in their faith journey.",
-    category: "fellowship"
+    title: "Prayer for Healing & Holy Spirit Fulfillment",
+    amharicTitle: "ለመንፈስ ቅዱስ ሙላት እና ለህመምተኞች የሚፀለይበት ጊዜ",
+    day: "Wednesday",
+    amharicDay: "ዕረቡ",
+    time: "11:00 AM – 1:00 PM",
+    location: "Church Sanctuary",
+    category: "prayer",
+  },
+  {
+    id: 7,
+    title: "Prayer & Consultation",
+    amharicTitle: "የማማከር እና የፀሎት አገልግሎት",
+    day: "Saturday",
+    amharicDay: "ቅዳሜ",
+    time: "2:00 PM – 6:00 PM",
+    location: "Church Sanctuary / Prayer Room",
+    category: "consultation",
   },
 ]
 
 const categoryColors: Record<string, string> = {
   worship: "bg-blue-100 text-blue-800",
   study: "bg-purple-100 text-purple-800",
-  youth: "bg-green-100 text-green-800",
-  children: "bg-pink-100 text-pink-800",
   prayer: "bg-yellow-100 text-yellow-800",
-  fellowship: "bg-indigo-100 text-indigo-800",
+  consultation: "bg-green-100 text-green-800",
 }
 
 export default function WeeklyMinistries() {
   return (
     <section className="py-16 bg-gray-50">
       <div className="container-custom">
-        <h2 className="section-title centered">Weekly Ministries</h2>
+        <h2 className="section-title centered">Weekly Ministries / የሳምንቱ አገልግሎቶች</h2>
         <p className="text-center text-gray-600 mb-10 max-w-2xl mx-auto">
-          Join us for our regular weekly ministries and grow in your faith journey.
-          Everyone is welcome to participate in these gatherings.
+          Join us in prayer, worship, and fellowship throughout the week.
+          አብረውን ያምልኩ ይፀልዩ ቃል ይካፈሉ ሁላችሁም ተጋብዛቹሃል።
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -85,18 +115,28 @@ export default function WeeklyMinistries() {
             <Card key={item.id} className="card-hover">
               <CardHeader className="pb-2">
                 <div className="flex justify-between items-start">
-                  <CardTitle className="text-xl font-heading">{item.title}</CardTitle>
+                  <CardTitle className="text-xl font-heading">
+                    {item.title}
+                    {item.amharicTitle && (
+                      <div className="text-sm text-gray-500">{item.amharicTitle}</div>
+                    )}
+                  </CardTitle>
                   <Badge className={categoryColors[item.category] || "bg-gray-100 text-gray-800"}>
                     {item.category}
                   </Badge>
                 </div>
-                <CardDescription>{item.description}</CardDescription>
+                {item.description && (
+                  <CardDescription>{item.description}</CardDescription>
+                )}
+                {item.amharicDescription && (
+                  <CardDescription className="text-gray-500">{item.amharicDescription}</CardDescription>
+                )}
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center">
                     <Calendar className="h-4 w-4 mr-2 text-church-primary" />
-                    <span>{item.day}</span>
+                    <span>{item.day}{item.amharicDay && ` / ${item.amharicDay}`}</span>
                   </div>
                   <div className="flex items-center">
                     <Clock className="h-4 w-4 mr-2 text-church-primary" />
@@ -106,13 +146,28 @@ export default function WeeklyMinistries() {
                     <MapPin className="h-4 w-4 mr-2 text-church-primary" />
                     <span>{item.location}</span>
                   </div>
+                  {item.phone && (
+                    <div className="flex items-center">
+                      <Phone className="h-4 w-4 mr-2 text-church-primary" />
+                      {item.phone.startsWith('http') ? (
+                        <a href={item.phone} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="text-blue-600 hover:text-blue-800 underline cursor-pointer">
+                          {item.phone}
+                        </a>
+                      ) : (
+                        <a 
+                        href={`tel:${item.phone.replace(/[^\d+]/g, '')}`} 
+                        className="text-blue-600 hover:text-blue-800 underline cursor-pointer">
+                          <span>{item.phone}</span>
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
-              <CardFooter>
-                {/*<button className="text-church-primary font-medium hover:text-church-primary/80 transition-colors">
-                  Learn more &rarr;
-                </button>*/}
-              </CardFooter>
+              <CardFooter />
             </Card>
           ))}
         </div>

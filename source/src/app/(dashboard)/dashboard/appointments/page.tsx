@@ -56,6 +56,10 @@ export default function AppointmentsPage() {
                 params.append('preferredTo', preferredDateRange[1].toISOString())
             }
 
+            // Add pagination parameters (you might want to make these stateful later)
+            params.append('page', '1')
+            params.append('pageSize', '100') // Set a high pageSize to get all data initially
+
             const response = await fetch(`/api/appointments?${params.toString()}`, {
                 signal: controller.signal
             })
@@ -66,7 +70,7 @@ export default function AppointmentsPage() {
             }
 
             const data = await response.json()
-            setAppointments(data)
+            setAppointments(data.items)
         } catch (err: unknown) {
             if (err instanceof Error && err.name !== 'AbortError') {
                 console.error('Failed to fetch appointments:', err)

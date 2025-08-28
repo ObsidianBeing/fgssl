@@ -1,32 +1,28 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI;
-
-if (!MONGODB_URI) {
-    throw new Error(
-        "Please define the MONGODB_URI environment variable in .env.local"
-    );
-}
 
 interface MongooseCache {
     conn: typeof mongoose | null;
     promise: Promise<typeof mongoose> | null;
 }
 
-// Extend the globalThis type properly for TypeScript
-declare global {
-    // For Node.js runtime
-    // eslint-disable-next-line no-var
-    var mongoose: MongooseCache | undefined;
-}
+// Use a more robust global caching approach
+let cached: MongooseCache = (global as any).mongoose;
 
-const cached: MongooseCache = globalThis.mongoose ?? { conn: null, promise: null };
-
-if (!globalThis.mongoose) {
-    globalThis.mongoose = cached;
+if (!cached) {
+    cached = (global as any).mongoose = { conn: null, promise: null };
 }
 
 export async function connectMongoDB(): Promise<typeof mongoose> {
+    if (!MONGODB_URI) {
+        throw new Error(
+            "Please define the MONGODB_URI environment variable in .env.local"
+        );
+    }
+
+    // Check if already connected
     if (cached.conn && mongoose.connection.readyState === 1) {
         console.log("✅ Using existing MongoDB connection");
         return cached.conn;
@@ -42,12 +38,14 @@ export async function connectMongoDB(): Promise<typeof mongoose> {
         };
 
         console.log("🔄 Creating new MongoDB connection...");
-
+        
         cached.promise = mongoose
-            .connect(MONGODB_URI!, opts)
+            .connect(MONGODB_URI, opts)
             .then((mongooseInstance) => {
                 console.log("✅ MongoDB connected successfully");
-                console.log(`📍 Connected to database: ${mongooseInstance.connection.name}`);
+                if (mongooseInstance.connection.name) {
+                    console.log(`📍 Connected to database: ${mongooseInstance.connection.name}`);
+                }
                 console.log(`🔗 Connection state: ${mongooseInstance.connection.readyState}`);
                 return mongooseInstance;
             })
@@ -70,7 +68,7 @@ export async function connectMongoDB(): Promise<typeof mongoose> {
 export function getConnectionStatus(): string {
     const states = {
         0: "disconnected",
-        1: "connected",
+        1: "connected", 
         2: "connecting",
         3: "disconnecting",
     };
@@ -86,4 +84,5 @@ export async function disconnectMongoDB(): Promise<void> {
     }
 }
 
-export const runtime = "nodejs";
+// Remove the runtime export if you're not using it specifically
+// export const runtime = "nodejs";

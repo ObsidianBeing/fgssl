@@ -8,5 +8,7 @@ export async function getCurrentUser() {
         name: session.user.name ?? 'Unknown',
         email: session.user.email ?? 'No email',
         role: session.user.role ?? 'member',
+        image: session.user.image,
+        id: session.user.id
     };
 }

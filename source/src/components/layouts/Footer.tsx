@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { Facebook, Twitter, Instagram, Youtube, MapPin, Phone, Mail, Clock } from 'lucide-react'
+import { Facebook,  Instagram, Youtube, MapPin, Phone, Mail, Clock } from 'lucide-react'
+import { FaTiktok } from 'react-icons/fa';
 import Image from 'next/image'
 
 const navigation = {
@@ -13,7 +14,7 @@ const navigation = {
     ],
     social: [
         { name: 'Facebook', icon: Facebook, href: '#' },
-        { name: 'Twitter', icon: Twitter, href: '#' },
+        { name: 'TikTok', icon: FaTiktok, href: 'https://www.tiktok.com/@thewordoflife82?_t=ZP-8zAsSYujGT1&_r=1' },
         { name: 'Instagram', icon: Instagram, href: '#' },
         { name: 'Youtube', icon: Youtube, href: '#' },
     ],
@@ -33,7 +34,7 @@ const Footer = () => {
                                 width={40}
                                 height={40}
                             />
-                            <span className="font-heading text-xl font-bold text-bold">EFGBC</span>
+                            <span className="font-heading text-xl font-bold">EFGBCSSL</span>
                         </Link>
                         <p className="text-gray-300 mb-6">
                             Transforming lives through faith, hope, and love. Join our community and be part of something greater.
@@ -72,11 +73,11 @@ const Footer = () => {
                             </div>
                             <div className="flex items-center space-x-3">
                                 <Phone className="h-5 w-5 text-church-secondary flex-shrink-0" />
-                                <span className="text-gray-300">(240) 821-0361</span>
+                                <span className="text-gray-300"><a href="tel:2408210361">(240) 821-0361</a></span>
                             </div>
                             <div className="flex items-center space-x-3">
                                 <Mail className="h-5 w-5 text-church-secondary flex-shrink-0" />
-                                <span className="text-gray-300">info@efgbcssl.org</span>
+                                <span className="text-gray-300"><a href="mailto:info@efgbcssl.org">info@efgbcssl.org</a></span>
                             </div>
                             <div className="flex items-start space-x-3">
                                 <Clock className="h-5 w-5 text-church-secondary flex-shrink-0 mt-0.5" />
@@ -87,41 +88,24 @@ const Footer = () => {
                             </div>
                         </div>
                     </div>
-
-                    {/*
-                    
-                    <div>
-                        <h3 className="text-lg font-bold mb-6 font-heading">Subscribe to Our Newsletter</h3>
-                        <p className="text-gray-300 mb-4">Stay updated with our latest sermons and events.</p>
-                        <form className="space-y-3">
-                            <input
-                                type="email"
-                                placeholder="Your email address"
-                                className="w-full px-4 py-2 rounded-md text-gray-900 focus:ring-2 focus:ring-church-secondary focus:outline-none"
-                                required
-                            />
-                            <button
-                                type="submit"
-                                className="w-full bg-church-secondary text-church-dark px-4 py-2 rounded-md hover:bg-church-secondary/90 transition-colors"
-                            >
-                                Subscribe
-                            </button>
-                        </form>
-                    </div>
-                    */}
                 </div>
 
                 <hr className="my-8 border-gray-700" />
 
                 <div className="flex flex-col md:flex-row justify-between items-center">
-                    <p className="text-gray-300 text-sm">
-                        &copy; {new Date().getFullYear()} Ethiopian Full Gospel Believers Church. All rights reserved.
-                    </p>
+                    <div className="text-center md:text-left">
+                        <p className="text-gray-300 text-sm">
+                            &copy; {new Date().getFullYear()} Ethiopian Full Gospel Believers Church. All rights reserved.
+                        </p>
+                        <p className="text-gray-400 text-xs mt-1">
+                            Developed by Next Level Media Events and Communications PLC
+                        </p>
+                    </div>
                     <div className="flex space-x-6 mt-4 md:mt-0 text-sm">
-                        <Link href="/privacy-policy" className="text-gray-300 hover:text-church-secondary">
+                        <Link href="/" className="text-gray-300 hover:text-church-secondary">
                             Privacy Policy
                         </Link>
-                        <Link href="/terms-of-service" className="text-gray-300 hover:text-church-secondary">
+                        <Link href="/" className="text-gray-300 hover:text-church-secondary">
                             Terms of Service
                         </Link>
                     </div>

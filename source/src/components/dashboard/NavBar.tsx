@@ -1,19 +1,16 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+// components/dashboard/NavBar.tsx
 'use client';
 
 import { Icons } from '@/components/dashboard/Icons';
 import { Button } from '@/components/ui/button';
-import { useTheme } from 'next-themes';
 import { cn } from '@/lib/utils';
 
 interface NavbarProps {
     className?: string;
-    onMenuToggle?: () => void; // for mobile sidebar
+    onMenuToggle?: () => void;
 }
 
 export function Navbar({ className, onMenuToggle }: NavbarProps) {
-    const { setTheme } = useTheme();
-
     return (
         <header
             className={cn(
@@ -34,10 +31,15 @@ export function Navbar({ className, onMenuToggle }: NavbarProps) {
                         <span className="sr-only">Toggle menu</span>
                     </Button>
 
-                    {/* Logo / Title */}
-                    <div className="hidden md:flex items-center">
+                    {/* Logo / Title for mobile */}
+                    <div className="md:hidden">
                         <h1 className="text-lg font-heading font-semibold">Dashboard</h1>
                     </div>
+                </div>
+
+                {/* User greeting for desktop */}
+                <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
+                    Welcome back!
                 </div>
             </div>
         </header>

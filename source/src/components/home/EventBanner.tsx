@@ -56,14 +56,18 @@ export default function EventBanner({ events }: { events: Event[] }) {
         <div className="flex flex-col lg:flex-row items-center gap-8">
           {/* Event Image */}
           <div className="w-full lg:w-2/3 h-64 md:h-80 lg:h-96 relative rounded-lg overflow-hidden shadow-md bg-gray-200">
-            <Image
-              src={currentEvent.imageSrc}
-              alt={currentEvent.title}
-              fill
-              sizes="(max-width: 1024px) 100vw, 66vw"
-              className="object-cover"
-              priority
-            />
+            <div className="w-full">
+              <Image
+                src={currentEvent.imageSrc}
+                alt={currentEvent.title}
+                width={800}   // max width you allow
+                height={600}  // just a ratio, Next.js keeps aspect ratio
+                style={{ width: '100%', height: 'auto' }}
+                className="object-cover"
+                priority
+              />
+            </div>
+
             {/* Image overlay gradient */}
             <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-black/10 to-transparent" />
           </div>

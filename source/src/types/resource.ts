@@ -50,7 +50,7 @@ export interface PDFResource extends BaseResource {
 /** Video */
 export interface VideoResource extends BaseResource {
     type: "video";
-    videoUrl: string;         // e.g., YouTube watch url or CDN
+    videoUrl?: string;         // e.g., YouTube watch url or CDN
     duration?: string;        // "12:34" or "01:05:49"
     youtubeId?: string;       // optional for external link
     embedUrl?: string;

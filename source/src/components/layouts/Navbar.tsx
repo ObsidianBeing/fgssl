@@ -10,7 +10,7 @@ import { Menu, X } from 'lucide-react'
 const navigation = [
     { name: 'Home', href: '/' },
     { name: 'About Us', href: '/about' },
-    { name: 'Blog', href: '/blog' },
+    //{ name: 'Blog', href: '/blog' },
     { name: 'Donation', href: '/donations' },
     { name: 'Resources', href: '/resources' },
     { name: 'Contact', href: '/contact' }
@@ -42,7 +42,7 @@ export default function Navbar() {
                             width={40}
                             height={40}
                         />
-                        <span className="font-heading text-xl font-bold text-church-primary">EFGBC</span>
+                        <span className="font-heading text-xl font-bold text-church-primary">EFGBCSSL</span>
                     </Link>
                 </div>
 
@@ -62,11 +62,7 @@ export default function Navbar() {
                             Donate
                         </Button>
                     </Link>
-                    <Link href="/auth/login" as="/login">
-                        <Button className=''>
-                            Become A Family
-                        </Button>
-                    </Link>
+
                 </div>
 
                 {/* Mobile menu button */}
@@ -107,11 +103,7 @@ export default function Navbar() {
                                 Donate
                             </Button>
                         </Link>
-                        <Link href="/login">
-                            <Button className='w-full mt-3'>
-                                Become A Family
-                            </Button>
-                        </Link>
+
                     </div>
                 </div>
             )}

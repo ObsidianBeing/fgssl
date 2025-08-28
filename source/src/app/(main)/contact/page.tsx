@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 "use client"
 
 import { useState, useEffect } from 'react'
@@ -8,25 +9,19 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/hooks/use-toast'
-import { MapPin, Phone, Mail, Clock, ExternalLink, Navigation, Loader2 } from 'lucide-react'
+import { MapPin, Phone, Mail, Clock, ExternalLink, Navigation, Loader2, Car, Train, PersonStanding, Copy } from 'lucide-react'
 import AppointmentForm from '@/components/home/AppointmentForm'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 
 const CHURCH_ADDRESS = "914 Silver Spring Avenue Suite 204B, Silver Spring, MD 20910"
-const MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 const CHURCH_COORDS = { lat: 38.9907, lng: -77.0261 }
 
 export default function ContactPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
-    const [mapLoaded, setMapLoaded] = useState(false)
     const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null)
-    const [travelInfo, setTravelInfo] = useState<{
-        distance: string
-        duration: string
-        mode: 'driving' | 'walking' | 'transit'
-    } | null>(null)
-    const [loadingTravelInfo, setLoadingTravelInfo] = useState(false)
+    const [distance, setDistance] = useState<number | null>(null)
+    const [loadingLocation, setLoadingLocation] = useState(false)
+    const [locationError, setLocationError] = useState<string | null>(null)
     const { toast } = useToast()
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -34,20 +29,15 @@ export default function ContactPage() {
         setIsSubmitting(true)
 
         const form = e.currentTarget
-        const formData = new FormData(form);
+        const formData = new FormData(form)
         const data = {
             name: formData.get('name') as string,
             email: formData.get('email') as string,
             subject: formData.get('subject') as string,
             message: formData.get('message') as string
         }
-        //const data = Object.fromEntries(formData.entries())
-
-        console.log("Form data to submit:", data);
-
 
         try {
-
             const response = await fetch('/api/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -75,143 +65,142 @@ export default function ContactPage() {
         }
     }
 
-    const getDirections = () => {
-        if (!userLocation) {
-            toast({
-                title: "Location Required",
-                description: "Please allow location access to get directions",
-                variant: "destructive"
-            })
+    // Calculate distance using Haversine formula
+    const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+        const R = 3959 // Earth's radius in miles
+        const dLat = (lat2 - lat1) * Math.PI / 180
+        const dLon = (lon2 - lon1) * Math.PI / 180
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2)
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+        return R * c
+    }
+
+    // Get user location
+    const getUserLocation = async () => {
+        if (!navigator.geolocation) {
+            setLocationError("Geolocation is not supported by this browser")
             return
         }
 
+        setLoadingLocation(true)
+        setLocationError(null)
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const userPos = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                }
+                setUserLocation(userPos)
+
+                const dist = calculateDistance(
+                    userPos.lat,
+                    userPos.lng,
+                    CHURCH_COORDS.lat,
+                    CHURCH_COORDS.lng
+                )
+                setDistance(dist)
+                setLoadingLocation(false)
+
+                toast({
+                    title: "Location found!",
+                    description: `You're about ${dist.toFixed(1)} miles away from the church.`,
+                })
+            },
+            (error) => {
+                setLoadingLocation(false)
+                let errorMessage = "Unable to get your location"
+
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = "Location access denied. Please enable location services."
+                        break
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = "Location information unavailable"
+                        break
+                    case error.TIMEOUT:
+                        errorMessage = "Location request timed out"
+                        break
+                }
+
+                setLocationError(errorMessage)
+                toast({
+                    title: "Location Error",
+                    description: errorMessage,
+                    variant: "destructive"
+                })
+            },
+            { timeout: 10000, enableHighAccuracy: true }
+        )
+    }
+
+    // Open directions in various apps
+    const openDirections = (app: 'google' | 'apple' | 'waze') => {
         const destination = encodeURIComponent(CHURCH_ADDRESS)
-        const origin = encodeURIComponent(`${userLocation.lat},${userLocation.lng}`)
-        window.open(`https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=${travelInfo?.mode || 'driving'}`)
-    }
-
-    const calculateTravelTime = async () => {
-        if (!userLocation || !window.google) return
-
-        setLoadingTravelInfo(true)
-
-        try {
-            const service = new google.maps.DistanceMatrixService()
-            const response = await service.getDistanceMatrix({
-                origins: [new google.maps.LatLng(userLocation.lat, userLocation.lng)],
-                destinations: [new google.maps.LatLng(CHURCH_COORDS.lat, CHURCH_COORDS.lng)],
-                travelMode: google.maps.TravelMode.DRIVING,
-                unitSystem: google.maps.UnitSystem.IMPERIAL,
-            })
-
-            if (response.rows[0].elements[0].status === "OK") {
-                const { distance, duration } = response.rows[0].elements[0]
-                if (distance && duration) {
-                    setTravelInfo({
-                        distance: distance.text,
-                        duration: duration.text,
-                        mode: 'driving'
-                    })
-                }
-            }
-        } catch (error) {
-            console.error("Error calculating travel time:", error)
-        } finally {
-            setLoadingTravelInfo(false)
-        }
-    }
-
-    useEffect(() => {
-        // Load Google Maps script
-        const script = document.createElement('script')
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${MAPS_API_KEY}&libraries=places,geometry&callback=initMap`
-        script.async = true
-        script.defer = true
-        script.onload = () => setMapLoaded(true)
-        document.head.appendChild(script)
-
-        // Get user location
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setUserLocation({
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude
-                    })
-                },
-                (error) => {
-                    console.error("Geolocation error:", error)
-                }
-            )
-        }
-
-        return () => {
-            document.head.removeChild(script)
-        }
-    }, [])
-
-    useEffect(() => {
-        if (mapLoaded && userLocation) {
-            initMap()
-            calculateTravelTime()
-        }
-    }, [mapLoaded, userLocation])
-
-    const initMap = () => {
-        const map = new google.maps.Map(document.getElementById("map") as HTMLElement, {
-            center: CHURCH_COORDS,
-            zoom: 15,
-            styles: [
-                {
-                    "featureType": "poi",
-                    "elementType": "labels",
-                    "stylers": [{ "visibility": "off" }]
-                },
-                {
-                    "featureType": "transit",
-                    "elementType": "labels",
-                    "stylers": [{ "visibility": "off" }]
-                },
-                {
-                    "featureType": "water",
-                    "elementType": "labels.text",
-                    "stylers": [{ "visibility": "off" }]
-                }
-            ]
-        })
-
-        new google.maps.Marker({
-            position: CHURCH_COORDS,
-            map,
-            title: "EFGBC Silver Spring",
-            icon: {
-                url: "https://maps.google.com/mapfiles/ms/icons/red-dot.png",
-                scaledSize: new google.maps.Size(40, 40)
-            }
-        })
+        let url = ''
 
         if (userLocation) {
-            new google.maps.Marker({
-                position: { lat: userLocation.lat, lng: userLocation.lng },
-                map,
-                title: "Your Location",
-                icon: {
-                    url: "https://maps.google.com/mapfiles/ms/icons/blue-dot.png",
-                    scaledSize: new google.maps.Size(40, 40)
-                }
-            })
+            const origin = `${userLocation.lat},${userLocation.lng}`
 
-            new google.maps.Polyline({
-                path: [
-                    { lat: userLocation.lat, lng: userLocation.lng },
-                    CHURCH_COORDS
-                ],
-                geodesic: true,
-                strokeColor: "#FF0000",
-                strokeOpacity: 0.7,
-                strokeWeight: 3,
-                map: map
+            switch (app) {
+                case 'google':
+                    url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${destination}&travelmode=driving`
+                    break
+                case 'apple':
+                    url = `http://maps.apple.com/?saddr=${origin}&daddr=${destination}&dirflg=d`
+                    break
+                case 'waze':
+                    url = `https://waze.com/ul?ll=${CHURCH_COORDS.lat},${CHURCH_COORDS.lng}&navigate=yes`
+                    break
+            }
+        } else {
+            // Fallback without user location
+            switch (app) {
+                case 'google':
+                    url = `https://www.google.com/maps/search/?api=1&query=${destination}`
+                    break
+                case 'apple':
+                    url = `http://maps.apple.com/?q=${destination}`
+                    break
+                case 'waze':
+                    url = `https://waze.com/ul?ll=${CHURCH_COORDS.lat},${CHURCH_COORDS.lng}&navigate=yes`
+                    break
+            }
+        }
+
+        window.open(url, '_blank')
+    }
+
+    // Copy address to clipboard
+    const copyAddress = async () => {
+        try {
+            await navigator.clipboard.writeText(CHURCH_ADDRESS)
+            toast({
+                title: "Address copied!",
+                description: "The church address has been copied to your clipboard.",
             })
+        } catch (error) {
+            toast({
+                title: "Copy failed",
+                description: "Unable to copy address. Please copy it manually.",
+                variant: "destructive"
+            })
+        }
+    }
+
+    // Estimate travel time based on distance
+    const getEstimatedTravelTime = (miles: number) => {
+        const drivingTime = Math.round(miles * 2.5) // Rough estimate: 2.5 minutes per mile in city
+        const walkingTime = Math.round(miles * 20) // Rough estimate: 20 minutes per mile walking
+        const transitTime = Math.round(miles * 4) // Rough estimate: 4 minutes per mile on transit
+
+        return {
+            driving: drivingTime,
+            walking: walkingTime,
+            transit: transitTime
         }
     }
 
@@ -253,9 +242,18 @@ export default function ContactPage() {
                                             <div className="h-10 w-10 rounded-full bg-church-primary/10 flex items-center justify-center mr-4 flex-shrink-0">
                                                 <MapPin className="h-5 w-5 text-church-primary" />
                                             </div>
-                                            <div>
+                                            <div className="flex-1">
                                                 <h3 className="text-lg font-bold mb-1">Our Address</h3>
-                                                <p className="text-gray-700">{CHURCH_ADDRESS}</p>
+                                                <p className="text-gray-700 mb-2">{CHURCH_ADDRESS}</p>
+                                                <Button
+                                                    onClick={copyAddress}
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="text-xs"
+                                                >
+                                                    <Copy className="h-3 w-3 mr-1" />
+                                                    Copy Address
+                                                </Button>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -269,8 +267,7 @@ export default function ContactPage() {
                                             </div>
                                             <div>
                                                 <h3 className="text-lg font-bold mb-1">Phone</h3>
-                                                <p className="text-gray-700">Main Office: (123) 456-7890</p>
-                                                <p className="text-gray-700">Prayer Line: (123) 456-7891</p>
+                                                <p className="text-gray-700">Main Office: (240) 821-0361</p>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -284,8 +281,8 @@ export default function ContactPage() {
                                             </div>
                                             <div>
                                                 <h3 className="text-lg font-bold mb-1">Email</h3>
-                                                <p className="text-gray-700">General Inquiries: info@gracechurch.org</p>
-                                                <p className="text-gray-700">Prayer Requests: prayer@gracechurch.org</p>
+                                                <p className="text-gray-700">General Inquiries: info@efgbcssl.org</p>
+                                                <p className="text-gray-700">Prayer Requests: prayer@efgbcssl.org</p>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -299,9 +296,7 @@ export default function ContactPage() {
                                             </div>
                                             <div>
                                                 <h3 className="text-lg font-bold mb-1">Office Hours</h3>
-                                                <p className="text-gray-700">Monday - Friday: 9:00 AM - 5:00 PM</p>
-                                                <p className="text-gray-700">Saturday: Closed</p>
-                                                <p className="text-gray-700">Sunday: 8:00 AM - 1:00 PM</p>
+                                                <p className="text-gray-700">Monday - Saturday: 9:00 AM - 5:00 PM</p>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -341,7 +336,14 @@ export default function ContactPage() {
                                             className="w-full bg-church-primary text-white hover:bg-church-primary/90"
                                             disabled={isSubmitting}
                                         >
-                                            {isSubmitting ? "Sending..." : "Send Message"}
+                                            {isSubmitting ? (
+                                                <>
+                                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                    Sending...
+                                                </>
+                                            ) : (
+                                                "Send Message"
+                                            )}
                                         </Button>
                                     </form>
                                 </CardContent>
@@ -351,75 +353,175 @@ export default function ContactPage() {
                 </div>
             </section>
 
-            {/* Map Section */}
+            {/* Location & Directions Section */}
             <section className="py-16 bg-gray-50 dark:bg-gray-800">
                 <div className="container-custom">
-                    <h2 className="section-title centered">Find Us</h2>
+                    <h2 className="section-title centered">Find Us & Get Directions</h2>
                     <p className="text-center text-gray-600 dark:text-gray-300 mb-10 max-w-2xl mx-auto">
-                        We&apos;re conveniently located in Silver Spring. Join us for Sunday services or stop by our office during the week.
+                        We&apos;re conveniently located in Silver Spring. Get directions using your preferred navigation app.
                     </p>
 
-                    <div className="relative h-[400px] rounded-lg overflow-hidden card-hover shadow-lg">
-                        {!mapLoaded ? (
-                            <Skeleton className="h-full w-full" />
-                        ) : (
-                            <>
-                                <div id="map" className="h-full w-full"></div>
-
-                                {/*Travel Info Display */}
-
-                                {/* Travel Info Display */}
-                                {travelInfo && (
-                                    <div className="absolute top-4 left-4 bg-white dark:bg-gray-900 p-3 rounded-lg shadow-md">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <Clock className="h-4 w-4 text-church-primary" />
-                                            <span className="font-medium">Estimated travel time:</span>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Badge variant="outline" className="border-church-primary text-church-primary">
-                                                {travelInfo.duration}
-                                            </Badge>
-                                            <Badge variant="outline">
-                                                {travelInfo.distance}
-                                            </Badge>
+                    <div className="max-w-4xl mx-auto">
+                        {/* Location Status Card */}
+                        <Card className="mb-8">
+                            <CardContent className="p-6">
+                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                                    <div className="flex items-center">
+                                        <Navigation className="h-6 w-6 text-church-primary mr-3" />
+                                        <div>
+                                            <h3 className="font-semibold mb-1">Your Location</h3>
+                                            {userLocation ? (
+                                                <div className="text-sm text-gray-600">
+                                                    <p>Location detected ✓</p>
+                                                    {distance && (
+                                                        <p className="font-medium text-church-primary">
+                                                            {distance.toFixed(1)} miles from church
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            ) : locationError ? (
+                                                <p className="text-sm text-red-600">{locationError}</p>
+                                            ) : (
+                                                <p className="text-sm text-gray-600">Click to detect your location</p>
+                                            )}
                                         </div>
                                     </div>
-                                )}
-
-                                {/*Map Controls */}
-                                <div className="absolute bottom-4 right-4 flex gap-2">
                                     <Button
-                                        onClick={getDirections}
-                                        className="bg-church-primary text-white hover:bg-church-primary/90 shadow-md flex items-center"
-                                        disabled={loadingTravelInfo}
+                                        onClick={getUserLocation}
+                                        variant="outline"
+                                        disabled={loadingLocation}
+                                        className="shrink-0"
                                     >
-                                        {loadingTravelInfo ? (
+                                        {loadingLocation ? (
                                             <>
-                                                <Loader2 className='h-4 w-4 mr-2 animate-spin' />
-                                                Calculating...
+                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                Getting Location...
                                             </>
                                         ) : (
                                             <>
-
-
-                                                <Navigation className="h-4 w-4 mr-2" />
-                                                {userLocation ? "Get Directions" : "Allow Location"}
+                                                <MapPin className="h-4 w-4 mr-2" />
+                                                {userLocation ? "Update Location" : "Get My Location"}
                                             </>
                                         )}
                                     </Button>
-                                    <Button asChild className="bg-white text-gray-800 hover:bg-gray-100 shadow-mddark:bg-gray-800 dark:text-white dark:hover:bg-gray-700">
-                                        <a
-                                            href={`https://www.google.com/maps?q=${encodeURIComponent(CHURCH_ADDRESS)}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                        >
-                                            <ExternalLink className="h-4 w-4 mr-2" />
-                                            View Map
-                                        </a>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Travel Time Estimates */}
+                        {distance && (
+                            <Card className="mb-8">
+                                <CardContent className="p-6">
+                                    <h3 className="font-semibold mb-4 flex items-center">
+                                        <Clock className="h-5 w-5 mr-2 text-church-primary" />
+                                        Estimated Travel Time
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        {(() => {
+                                            const times = getEstimatedTravelTime(distance)
+                                            return (
+                                                <>
+                                                    <div className="flex items-center gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                                                        <Car className="h-5 w-5 text-blue-600" />
+                                                        <div>
+                                                            <p className="font-medium">Driving</p>
+                                                            <p className="text-sm text-gray-600">{times.driving} minutes</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                                                        <Train className="h-5 w-5 text-green-600" />
+                                                        <div>
+                                                            <p className="font-medium">Transit</p>
+                                                            <p className="text-sm text-gray-600">{times.transit} minutes</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+                                                        <PersonStanding className="h-5 w-5 text-orange-600" />
+                                                        <div>
+                                                            <p className="font-medium">Walking</p>
+                                                            <p className="text-sm text-gray-600">{times.walking} minutes</p>
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )
+                                        })()}
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-3">
+                                        * Times are estimates based on distance and may vary with traffic and actual routes
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* Navigation Apps */}
+                        <Card>
+                            <CardContent className="p-6">
+                                <h3 className="font-semibold mb-4">Open Directions In:</h3>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <Button
+                                        onClick={() => openDirections('google')}
+                                        variant="outline"
+                                        className="flex items-center justify-center gap-2 h-12"
+                                    >
+                                        <div className="w-5 h-5 bg-blue-600 rounded-sm flex items-center justify-center">
+                                            <span className="text-white text-xs font-bold">G</span>
+                                        </div>
+                                        Google Maps
+                                    </Button>
+                                    <Button
+                                        onClick={() => openDirections('apple')}
+                                        variant="outline"
+                                        className="flex items-center justify-center gap-2 h-12"
+                                    >
+                                        <div className="w-5 h-5 bg-gray-800 rounded-sm flex items-center justify-center">
+                                            <span className="text-white text-xs">🗺</span>
+                                        </div>
+                                        Apple Maps
+                                    </Button>
+                                    <Button
+                                        onClick={() => openDirections('waze')}
+                                        variant="outline"
+                                        className="flex items-center justify-center gap-2 h-12"
+                                    >
+                                        <div className="w-5 h-5 bg-blue-500 rounded-sm flex items-center justify-center">
+                                            <span className="text-white text-xs font-bold">W</span>
+                                        </div>
+                                        Waze
                                     </Button>
                                 </div>
-                            </>
-                        )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Embedded Map Alternative */}
+                        <Card className="mt-8">
+                            <CardContent className="p-6">
+                                <h3 className="font-semibold mb-4">Interactive Map</h3>
+                                <div className="aspect-video rounded-lg overflow-hidden border">
+                                    <iframe
+                                        src={`https://www.openstreetmap.org/export/embed.html?bbox=-77.0361,-77.0161,38.9807,39.0007&layer=mapnik&marker=${CHURCH_COORDS.lat},${CHURCH_COORDS.lng}`}
+                                        width="100%"
+                                        height="100%"
+                                        style={{ border: 0 }}
+                                        allowFullScreen
+                                        loading="lazy"
+                                        referrerPolicy="no-referrer-when-downgrade"
+                                        title="Church Location Map"
+                                    ></iframe>
+                                </div>
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    <Badge variant="outline" className="text-xs">
+                                        <MapPin className="h-3 w-3 mr-1" />
+                                        Silver Spring, MD
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                        Free parking available
+                                    </Badge>
+                                    <Badge variant="outline" className="text-xs">
+                                        Metro accessible
+                                    </Badge>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
                 </div>
             </section>

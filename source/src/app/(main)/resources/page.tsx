@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
     Download, FileText, Video, Music, Search,
-    Grid, List, Star, SortAsc, SortDesc
+    Grid, List, Star, SortAsc, SortDesc, ImageIcon, LinkIcon
 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
@@ -22,25 +22,105 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import ResourceCard from '@/components/resources/ResourceCard'
-import { AudioResource, ImageResource, LinkResource, PDFResource, Resource, ResourceFilter, VideoResource, isAudioResource, isPDFResource, isVideoResource } from '@/types/resource'
 
-// dynamically import heavy viewers
-const VideoPlayer = dynamic(() => import('@/components/resources/VideoPlayer'))
-const PDFViewer = dynamic(() => import('@/components/resources/PDFViewer'))
-const AudioPlayer = dynamic(() => import('@/components/resources/AudioPlayer'))
+// Type definitions
+interface BaseResource {
+    id: string
+    title: string
+    description?: string
+    thumbnail?: string
+    thumbnailUrl?: string
+    date?: string
+    createdAt?: string
+    type: 'video' | 'audio' | 'pdf' | 'image' | 'link'
+    downloadable: boolean
+    featured: boolean
+    category: string
+    tags?: string[]
+    views?: number
+    downloads?: number
+}
 
-const RESOURCE_TYPES = ['all', 'video', 'audio', 'pdf'] as const
+interface VideoResource extends BaseResource {
+    type: 'video'
+    videoUrl?: string
+    duration?: string
+    youtubeId?: string
+    embedUrl?: string
+}
+
+interface AudioResource extends BaseResource {
+    type: 'audio'
+    audioUrl?: string
+    fileUrl?: string
+    downloadUrl?: string
+    duration?: string
+}
+
+interface PDFResource extends BaseResource {
+    type: 'pdf'
+    fileUrl?: string
+    downloadUrl?: string
+}
+
+interface ImageResource extends BaseResource {
+    type: 'image'
+    imageUrl?: string
+    downloadUrl?: string
+}
+
+interface LinkResource extends BaseResource {
+    type: 'link'
+    url?: string
+}
+
+type Resource = VideoResource | AudioResource | PDFResource | ImageResource | LinkResource
+
+interface ResourceFilter {
+    type: 'all' | 'video' | 'audio' | 'pdf' | 'image' | 'link'
+    category: 'all' | 'sermons' | 'studies' | 'events' | 'music' | 'other'
+    search: string
+    downloadable?: boolean
+    featured?: boolean
+}
+
+// Type guards
+const isVideoResource = (resource: Resource): resource is VideoResource => resource.type === 'video'
+const isAudioResource = (resource: Resource): resource is AudioResource => resource.type === 'audio'
+const isPDFResource = (resource: Resource): resource is PDFResource => resource.type === 'pdf'
+
+// Dynamically import heavy viewers
+const VideoPlayer = dynamic(() => import('@/components/resources/VideoPlayer'), {
+    loading: () => <div>Loading video player...</div>
+})
+const PDFViewer = dynamic(() => import('@/components/resources/PDFViewer'), {
+    loading: () => <div>Loading PDF viewer...</div>
+})
+const AudioPlayer = dynamic(() => import('@/components/resources/AudioPlayer'), {
+    loading: () => <div>Loading audio player...</div>
+})
+
+const RESOURCE_TYPES = ['all', 'video', 'audio', 'pdf', 'image', 'link'] as const
 const CATEGORIES = ['all', 'sermons', 'studies', 'events', 'music', 'other'] as const
 const ITEMS_PER_PAGE = 12
 
-const DEFAULT_THUMBNAILS = {
-    video: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTUgMTBsNS4yOTIgNGEuMjY1LjI2NSAwIDAgMSAuMjA4LjQ2M2wtNS4yOTItNGEuMjY1LjI2NSAwIDAgMSAwLS40NjNsNS4yOTItNGEuMjY1LjI2NSAwIDAgMS0uMjA4LjQ2M0wxNSAxMHoiIGZpbGw9IiM2YjcyODAiLz48L3N2Zz4=",
-    audio: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNOSAxOHYtNi4zNGE0IDQgMCAxIDEgNCAwVjE4TTkgMThIN200IDBoLTJNOSAxNHY0bTQgMHYtNCIgZmlsbD0iIzM2NzBmYSIgc3Ryb2tlPSIjMzY3MGZhIiBzdHJva2Utd2lkdGg9IjIiLz48L3N2Zz4=",
-    pdf: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTQgMnY0YTIgMiAwIDAgMCAyIDJoNE0xNCAydjRhMiAyIDAgMCAxLTIgMkg4YTQgNCAwIDAgMC00IDR2OGE0IDQgMCAwIDAgNCA0aDhhNCA0IDAgMCAwIDQtNFY4YTQgNCAwIDAgMC00LTRoLTRWN3oiIGZpbGw9IiNlMTFlMWUiLz48cGF0aCBkPSJNOSAxMmg2TTkgMTZoNk05IDIwaDQiIGZpbGw9IiNmZjNhNTAiLz48L3N2Zz4=",
-    image: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNNSAxOWExIDEgMCAwIDEtMS0xVjZhMSAxIDAgMCAxIDEtMWgxNGExIDEgMCAwIDEgMSAxdjEyYTEgMSAwIDAgMS0xIDFINXoiIGZpbGw9IiNmMWY1ZjkiLz48Y2lyY2xlIGN4PSI4LjUiIGN5PSI4LjUiIHI9IjEuNSIgZmlsbD0iIzljYTdmZiIvPjxwYXRoIGQ9Im0yMSAxNS01LTUtNSA1IiBzdHJva2U9IiM2NzcyODAiIHN0cm9rZS13aWR0aD0iMiIvPjwvc3ZnPg==",
-    link: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJtMTAgMTQgNC00TTguMDMgMTEuOTNjLTEuMDYgMS4wNi0xLjA2IDIuNzggMCAzLjg0LjUzLjUzIDEuMjIuODIgMS45MS44Mi43IDAgMS4zOS0uMjkgMS45Mi0uODJNMTAuOTUgNi41OGMyLjEyLTIuMTIgNS41Ni0yLjEyIDcuNjggMGMyLjEyIDIuMTIgMi4xMiA1LjU2IDAgNy42OC0uNTMuNTMtMS4yMi44Mi0xLjkxLjgyLS43IDAtMS4zOS0uMjktMS45Mi0uODJaIiBmaWxsPSIjOTBhNmZmIi8+PC9zdmc+",
-    default: "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTAgMTBoNGEyIDIgMCAwIDEgMiAydjhhMiAyIDAgMCAxLTIgMkg2YTIgMiAwIDAgMS0yLTJ2LTRhMiAyIDAgMCAxIDItMnoiIGZpbGw9IiNmMWY1ZjkiLz48cGF0aCBkPSJNMTQgMTBoNGEyIDIgMCAwIDEgMiAydjRhMiAyIDAgMCAxLTIgMmgtNGEyIDIgMCAwIDEtMi0ydi00YTIgMiAwIDAgMSAyLTJ6IiBmaWxsPSIjZjFmNWY5Ii8+PHBhdGggZD0iTTYgMTBoNGEyIDIgMCAwIDEgMiAydjRhMiAyIDAgMCAxLTIgMkg2YTIgMiAwIDAgMS0yLTJ2LTRhMiAyIDAgMCAxIDItMnoiIGZpbGw9IiNmMWY1ZjkiLz48L3N2Zz4="
-};
+// Helper function to get appropriate icon for resource type
+const getResourceIcon = (type: string, size = 24) => {
+    switch (type) {
+        case 'video':
+            return <Video size={size} className="text-red-500" />
+        case 'audio':
+            return <Music size={size} className="text-blue-500" />
+        case 'pdf':
+            return <FileText size={size} className="text-green-500" />
+        case 'image':
+            return <ImageIcon size={size} className="text-purple-500" />
+        case 'link':
+            return <LinkIcon size={size} className="text-orange-500" />
+        default:
+            return <FileText size={size} className="text-gray-500" />
+    }
+}
 
 export default function EnhancedResourcesPage() {
     const [searchTerm, setSearchTerm] = useState('')
@@ -54,13 +134,14 @@ export default function EnhancedResourcesPage() {
     const [currentPage, setCurrentPage] = useState(1)
     const [resources, setResources] = useState<Resource[]>([])
     const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
     const [sortBy, setSortBy] = useState<'date' | 'title' | 'type'>('date')
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
     const [showFeaturedOnly, setShowFeaturedOnly] = useState(false)
     const [showDownloadableOnly, setShowDownloadableOnly] = useState(false)
 
-    // media state
+    // Media state
     const [selectedVideo, setSelectedVideo] = useState<VideoResource | null>(null)
     const [selectedPDF, setSelectedPDF] = useState<PDFResource | null>(null)
     const [selectedAudio, setSelectedAudio] = useState<AudioResource | null>(null)
@@ -69,77 +150,97 @@ export default function EnhancedResourcesPage() {
         const fetchResources = async () => {
             try {
                 setLoading(true)
+                setError(null)
+                
                 const res = await fetch('/api/resources')
+                if (!res.ok) {
+                    throw new Error(`Failed to fetch resources: ${res.status} ${res.statusText}`)
+                }
+                
                 const data = await res.json()
 
                 const transformed: Resource[] = data.map((item: any) => {
-                    const thumbnail = item.thumbnail || DEFAULT_THUMBNAILS[item.type as keyof typeof DEFAULT_THUMBNAILS] || DEFAULT_THUMBNAILS.default;
+                    // For YouTube videos, use the thumbnail if available
+                    const isYouTubeVideo = item.type === 'video' && item.id && item.id.length === 11
+                    const thumbnail = isYouTubeVideo
+                        ? (item.thumbnail || `https://img.youtube.com/vi/${item.id}/mqdefault.jpg`)
+                        : item.thumbnail || null
+
                     const baseResource = {
-                        id: item.id,
-                        title: item.title,
+                        id: item.id || Math.random().toString(36).substr(2, 9),
+                        title: item.title || 'Untitled Resource',
                         description: item.description || '',
                         thumbnail: thumbnail,
                         thumbnailUrl: thumbnail,
                         date: item.date,
                         createdAt: item.date,
                         type: item.type,
-                        downloadable: item.canDownload || false, // API returns 'canDownload'
+                        downloadable: item.canDownload || false,
                         featured: item.featured || false,
                         category: item.category || 'other',
                         tags: item.tags || [],
-                    };
+                        views: item.views,
+                        downloads: item.downloads,
+                    }
 
                     // Add type-specific properties
                     switch (item.type) {
                         case 'video':
                             return {
                                 ...baseResource,
-                                videoUrl: item.previewUrl, // API returns 'previewUrl'
+                                type: 'video' as const,
+                                videoUrl: item.previewUrl ? String(item.previewUrl) : undefined,
                                 duration: item.duration,
-                                youtubeId: item.id, // Use the video ID as youtubeId
+                                youtubeId: item.id,
                                 embedUrl: item.embedUrl || `https://www.youtube.com/embed/${item.id}`,
-                            };
+                            }
                         case 'audio':
                             return {
                                 ...baseResource,
-                                audioUrl: item.previewUrl, // API returns 'previewUrl'
-                                fileUrl: item.previewUrl, // alias
+                                type: 'audio' as const,
+                                audioUrl: item.previewUrl,
+                                fileUrl: item.previewUrl,
                                 downloadUrl: item.downloadUrl,
                                 duration: item.duration,
-                            };
+                            }
                         case 'pdf':
                             return {
                                 ...baseResource,
-                                fileUrl: item.previewUrl, // API returns 'previewUrl'
+                                type: 'pdf' as const,
+                                fileUrl: item.previewUrl,
                                 downloadUrl: item.downloadUrl,
-                            };
+                            }
                         case 'image':
                             return {
                                 ...baseResource,
-                                imageUrl: item.previewUrl, // API returns 'previewUrl'
+                                type: 'image' as const,
+                                imageUrl: item.previewUrl,
                                 downloadUrl: item.downloadUrl,
-                            };
+                            }
                         case 'link':
                             return {
                                 ...baseResource,
-                                url: item.previewUrl, // API returns 'previewUrl'
-                            };
+                                type: 'link' as const,
+                                url: item.previewUrl,
+                            }
                         default:
-                            return baseResource;
+                            return baseResource as Resource
                     }
-                });
+                })
 
                 setResources(transformed)
-            } catch (e) {
-                console.error('Failed to fetch resources', e)
+            } catch (err) {
+                console.error('Failed to fetch resources:', err)
+                setError(err instanceof Error ? err.message : 'Failed to fetch resources')
             } finally {
                 setLoading(false)
             }
         }
+        
         fetchResources()
     }, [])
 
-    // filtering + sorting
+    // Filtering + sorting
     const filteredAndSortedResources = useMemo(() => {
         const filtered = resources.filter(r => {
             const matchesSearch =
@@ -168,15 +269,15 @@ export default function EnhancedResourcesPage() {
                     break
                 default:
                     const getDateValue = (resource: Resource): number => {
-                        const dateStr = resource.date || resource.createdAt;
-                        if (!dateStr) return 0;
+                        const dateStr = resource.date || resource.createdAt
+                        if (!dateStr) return 0
 
-                        const date = new Date(dateStr);
-                        return isNaN(date.getTime()) ? 0 : date.getTime();
+                        const date = new Date(dateStr)
+                        return isNaN(date.getTime()) ? 0 : date.getTime()
                     }
 
-                    aVal = getDateValue(a);
-                    bVal = getDateValue(b);
+                    aVal = getDateValue(a)
+                    bVal = getDateValue(b)
                     break
             }
             return sortOrder === 'asc'
@@ -193,51 +294,66 @@ export default function EnhancedResourcesPage() {
         currentPage * ITEMS_PER_PAGE
     )
 
-    // interactions
+    // Interactions
     const handleResourcePlay = (resource: Resource) => {
         if (isVideoResource(resource)) {
             setSelectedVideo(resource)
         } else if (isAudioResource(resource)) {
-            setSelectedAudio(resource as AudioResource)
+            setSelectedAudio(resource)
         } else if (isPDFResource(resource)) {
-            setSelectedPDF(resource as PDFResource)
+            setSelectedPDF(resource)
         }
     }
 
     const handleResourceDownload = (resource: Resource) => {
-        if (resource.downloadable) {
-            // Get the appropriate download URL based on resource type
-            let url: string | undefined;
+        if (!resource.downloadable) return
 
-            switch (resource.type) {
-                case 'pdf':
-                    url = (resource as PDFResource).downloadUrl || (resource as PDFResource).fileUrl;
-                    break;
-                case 'video':
-                    url = (resource as VideoResource).videoUrl;
-                    break;
-                case 'audio':
-                    url = (resource as AudioResource).downloadUrl || (resource as AudioResource).audioUrl || (resource as AudioResource).fileUrl;
-                    break;
-                case 'image':
-                    url = (resource as ImageResource).downloadUrl || (resource as ImageResource).imageUrl;
-                    break;
-                case 'link':
-                    url = (resource as LinkResource).url;
-                    break;
-            }
+        let url: string | undefined
 
-            if (!url) return;
-
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = resource.title;
-            link.target = '_blank'; // Open in new tab for better UX
-            link.rel = 'noopener noreferrer';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
+        switch (resource.type) {
+            case 'pdf':
+                url = (resource as PDFResource).downloadUrl || (resource as PDFResource).fileUrl
+                break
+            case 'video':
+                url = (resource as VideoResource).videoUrl
+                break
+            case 'audio':
+                url = (resource as AudioResource).downloadUrl || 
+                      (resource as AudioResource).audioUrl || 
+                      (resource as AudioResource).fileUrl
+                break
+            case 'image':
+                url = (resource as ImageResource).downloadUrl || (resource as ImageResource).imageUrl
+                break
+            case 'link':
+                url = (resource as LinkResource).url
+                break
         }
+
+        if (!url) return
+
+        const link = document.createElement('a')
+        link.href = url
+        link.download = resource.title
+        link.target = '_blank'
+        link.rel = 'noopener noreferrer'
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+    }
+
+    if (error) {
+        return (
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold text-red-600 mb-4">Error Loading Resources</h2>
+                    <p className="text-gray-600 mb-4">{error}</p>
+                    <Button onClick={() => window.location.reload()}>
+                        Try Again
+                    </Button>
+                </div>
+            </div>
+        )
     }
 
     return (
@@ -267,7 +383,7 @@ export default function EnhancedResourcesPage() {
             {/* Main */}
             <section className="py-12">
                 <div className="container-custom">
-                    {/* search + controls */}
+                    {/* Search + controls */}
                     <div className="flex flex-col lg:flex-row gap-4 mb-6 justify-between">
                         <div className="relative flex-1 max-w-md">
                             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
@@ -282,31 +398,55 @@ export default function EnhancedResourcesPage() {
                             />
                         </div>
                         <div className="flex gap-2 items-center">
-                            <Button variant={viewMode === 'grid' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('grid')}>
+                            <Button 
+                                variant={viewMode === 'grid' ? 'default' : 'outline'} 
+                                size="sm" 
+                                onClick={() => setViewMode('grid')}
+                            >
                                 <Grid className="h-4 w-4" />
                             </Button>
-                            <Button variant={viewMode === 'list' ? 'default' : 'outline'} size="sm" onClick={() => setViewMode('list')}>
+                            <Button 
+                                variant={viewMode === 'list' ? 'default' : 'outline'} 
+                                size="sm" 
+                                onClick={() => setViewMode('list')}
+                            >
                                 <List className="h-4 w-4" />
                             </Button>
-                            <span className="text-sm text-gray-500">{filteredAndSortedResources.length} results</span>
+                            <span className="text-sm text-gray-500">
+                                {filteredAndSortedResources.length} results
+                            </span>
                         </div>
                     </div>
 
-                    {/* filters */}
+                    {/* Filters */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-                        <Select value={filter.type} onValueChange={v => setFilter((f: any) => ({ ...f, type: v as any }))}>
+                        <Select 
+                            value={filter.type} 
+                            onValueChange={(v) => setFilter(f => ({ ...f, type: v as any }))}
+                        >
                             <SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger>
                             <SelectContent>
-                                {RESOURCE_TYPES.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                                {RESOURCE_TYPES.map(t => (
+                                    <SelectItem key={t} value={t}>
+                                        {t.charAt(0).toUpperCase() + t.slice(1)}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
-                        <Select value={filter.category} onValueChange={v => setFilter((f: any) => ({ ...f, category: v as any }))}>
+                        <Select 
+                            value={filter.category} 
+                            onValueChange={(v) => setFilter(f => ({ ...f, category: v as any }))}
+                        >
                             <SelectTrigger><SelectValue placeholder="Category" /></SelectTrigger>
                             <SelectContent>
-                                {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                {CATEGORIES.map(c => (
+                                    <SelectItem key={c} value={c}>
+                                        {c.charAt(0).toUpperCase() + c.slice(1)}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
-                        <Select value={sortBy} onValueChange={v => setSortBy(v as any)}>
+                        <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
                             <SelectTrigger><SelectValue placeholder="Sort by" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="date">Date</SelectItem>
@@ -314,33 +454,59 @@ export default function EnhancedResourcesPage() {
                                 <SelectItem value="type">Type</SelectItem>
                             </SelectContent>
                         </Select>
-                        <Button variant="outline" size="sm" onClick={() => setSortOrder(s => s === 'asc' ? 'desc' : 'asc')}>
-                            {sortOrder === 'asc' ? <><SortAsc className="h-4 w-4 mr-1" />Asc</> : <><SortDesc className="h-4 w-4 mr-1" />Desc</>}
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setSortOrder(s => s === 'asc' ? 'desc' : 'asc')}
+                        >
+                            {sortOrder === 'asc' ? (
+                                <><SortAsc className="h-4 w-4 mr-1" />Asc</>
+                            ) : (
+                                <><SortDesc className="h-4 w-4 mr-1" />Desc</>
+                            )}
                         </Button>
                     </div>
 
-                    {/* featured/download toggles */}
+                    {/* Featured/download toggles */}
                     <div className="flex gap-6 mb-8">
                         <div className="flex items-center space-x-2">
-                            <Switch checked={showFeaturedOnly} onCheckedChange={setShowFeaturedOnly} />
-                            <Label className="text-sm"><Star className="h-3 w-3 mr-1 inline" />Featured</Label>
+                            <Switch 
+                                checked={showFeaturedOnly} 
+                                onCheckedChange={setShowFeaturedOnly} 
+                            />
+                            <Label className="text-sm">
+                                <Star className="h-3 w-3 mr-1 inline" />Featured
+                            </Label>
                         </div>
                         <div className="flex items-center space-x-2">
-                            <Switch checked={showDownloadableOnly} onCheckedChange={setShowDownloadableOnly} />
-                            <Label className="text-sm"><Download className="h-3 w-3 mr-1 inline" />Downloadable</Label>
+                            <Switch 
+                                checked={showDownloadableOnly} 
+                                onCheckedChange={setShowDownloadableOnly} 
+                            />
+                            <Label className="text-sm">
+                                <Download className="h-3 w-3 mr-1 inline" />Downloadable
+                            </Label>
                         </div>
                     </div>
 
-                    {/* list/grid */}
+                    {/* List/grid */}
                     {loading ? (
                         <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-3' : 'grid-cols-1'}`}>
-                            {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-[200px] w-full rounded-xl" />)}
+                            {[...Array(8)].map((_, i) => (
+                                <Skeleton key={i} className="h-[200px] w-full rounded-xl" />
+                            ))}
                         </div>
                     ) : paginatedResources.length === 0 ? (
-                        <div className="text-center py-16 text-gray-500">No resources found</div>
+                        <div className="text-center py-16 text-gray-500">
+                            No resources found
+                        </div>
                     ) : (
                         <>
-                            <div className={`grid gap-6 ${viewMode === 'grid' ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'grid-cols-1'}`}>
+                            <div className={`grid gap-6 ${
+                                viewMode === 'grid' 
+                                    ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
+                                    : 'grid-cols-1'
+                            }`}>
                                 {paginatedResources.map(r => (
                                     <ResourceCard
                                         key={r.id}
@@ -348,6 +514,7 @@ export default function EnhancedResourcesPage() {
                                         variant={viewMode}
                                         onPlay={handleResourcePlay}
                                         onDownload={handleResourceDownload}
+                                        getResourceIcon={getResourceIcon}
                                     />
                                 ))}
                             </div>
@@ -355,11 +522,17 @@ export default function EnhancedResourcesPage() {
                                 <Pagination className="mt-12">
                                     <PaginationContent>
                                         <PaginationItem>
-                                            <PaginationPrevious onClick={() => setCurrentPage(p => Math.max(1, p - 1))} />
+                                            <PaginationPrevious 
+                                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
+                                            />
                                         </PaginationItem>
-                                        <PaginationItem><span className="px-4">Page {currentPage}/{totalPages}</span></PaginationItem>
                                         <PaginationItem>
-                                            <PaginationNext onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} />
+                                            <span className="px-4">Page {currentPage}/{totalPages}</span>
+                                        </PaginationItem>
+                                        <PaginationItem>
+                                            <PaginationNext 
+                                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
+                                            />
                                         </PaginationItem>
                                     </PaginationContent>
                                 </Pagination>
@@ -369,17 +542,28 @@ export default function EnhancedResourcesPage() {
                 </div>
             </section>
 
-            {/* players / viewers */}
+            {/* Players/viewers */}
             {selectedVideo && (
-                <VideoPlayer video={selectedVideo} isOpen={!!selectedVideo} onClose={() => setSelectedVideo(null)} />
+                <VideoPlayer 
+                    video={{ ...selectedVideo, videoUrl: selectedVideo.videoUrl ?? '' }} 
+                    isOpen={!!selectedVideo} 
+                    onClose={() => setSelectedVideo(null)} 
+                />
             )}
             {selectedPDF && (
-                <PDFViewer resource={selectedPDF} isOpen={!!selectedPDF} onClose={() => setSelectedPDF(null)} />
+                <PDFViewer 
+                    resource={{ ...selectedPDF, fileUrl: selectedPDF.fileUrl ?? '' }} 
+                    isOpen={!!selectedPDF} 
+                    onClose={() => setSelectedPDF(null)} 
+                />
             )}
             {selectedAudio && (
-                <AudioPlayer resource={selectedAudio} isOpen={!!selectedAudio} onClose={() => setSelectedAudio(null)} />
+                <AudioPlayer 
+                    resource={{ ...selectedAudio, audioUrl: selectedAudio.audioUrl ?? '' }} 
+                    isOpen={!!selectedAudio} 
+                    onClose={() => setSelectedAudio(null)} 
+                />
             )}
         </>
     )
 }
-

@@ -19,7 +19,7 @@ const UserSchema = new Schema<IUser>(
         email: { type: String, required: true, unique: true },
         name: { type: String, required: true },
         image: { type: String, default: null },
-        role: { type: String, default: "member" },
+        role: { type: String, enum: ['admin', 'manager', 'member'], default: "member" },
         phone: { type: String, default: null },
         emailVerified: { type: Date, default: null },
     },
@@ -56,4 +56,4 @@ export async function upsertUser(data: Partial<IUser>) {
     return user ? user.toObject() : null;
 }
 
-// Utility function for Credentials aut
+export default UserModel; 

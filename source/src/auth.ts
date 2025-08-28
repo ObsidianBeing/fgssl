@@ -167,7 +167,7 @@ export const authConfig: NextAuthConfig = {
                 path: "/",
                 secure: process.env.NODE_ENV === "production",
                 domain:
-                    process.env.NODE_ENV === "production" ? `fgssl.vercel.app` : undefined,
+                    process.env.NODE_ENV === "production" ? `efgbcssl.org` : undefined,
             },
         },
         callbackUrl: {
@@ -180,7 +180,7 @@ export const authConfig: NextAuthConfig = {
                 path: "/",
                 secure: process.env.NODE_ENV === "production",
                 domain:
-                    process.env.NODE_ENV === "production" ? `fgssl.vercel.app` : undefined,
+                    process.env.NODE_ENV === "production" ? `efgbcssl.org` : undefined,
             },
         },
     },

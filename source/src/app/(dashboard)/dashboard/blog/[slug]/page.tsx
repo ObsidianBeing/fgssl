@@ -7,12 +7,16 @@ import { handleEditBlogSubmit } from '@/actions/blogActions'
 import React from 'react'
 import { IBlog } from '@/models/Blog'
 
-type Props = { params: { slug: string } }
+// Update the Props type to match Next.js PageProps expectation
+interface Props {
+    params: Promise<{ slug: string }>
+}
 
 export default async function EditBlogPost({ params }: Props) {
-    const { slug } = params
+    // Await the params promise
+    const { slug } = await params
 
-    // fetch the post (normalize shape)
+    // fetch the post
     const postResp = await getBlogPostBySlug(slug)
     const post = (postResp && (postResp.data ?? postResp)) ?? null
 
@@ -20,40 +24,40 @@ export default async function EditBlogPost({ params }: Props) {
         notFound()
     }
 
-    // Ensure post is of type IBlog
+    // Cast safely to IBlog
     const blogPost = post as unknown as IBlog
 
-    // create a server action bound to this slug.
-    // IMPORTANT: this function must include 'use server' so it is passed
-    // as a server action to the client BlogEditor.
+    // prepare server action wrapper
     async function handleSubmit(formData: FormData) {
         'use server'
-        // reuse shared server-side logic; handleEditBlogSubmit is a server helper
-        await handleEditBlogSubmit(slug, formData)
+        await handleEditBlogSubmit(blogPost.post_id, formData) // ✅ use post_id, not slug
     }
 
-    // normalize publishDate to ISO string (BlogEditor accepts string|Date)
-    const publishDate = blogPost.publishDate ? new Date(blogPost.publishDate).toISOString() : new Date().toISOString()
+    // normalize publishDate to ISO string
+    const publishDate = blogPost.publishDate
+        ? new Date(blogPost.publishDate).toISOString()
+        : new Date().toISOString()
 
     return (
         <div className="container py-8">
             <h1 className="text-2xl font-bold mb-6">Edit Blog Post</h1>
 
             <BlogEditor
-                // pass server action reference (not an inline arrow) — we defined handleSubmit above
+                action={handleSubmit}
+                defaultValues={{
+                    title: blogPost.title ?? '',
+                    content: blogPost.content ?? '',
+                    excerpt: blogPost.excerpt ?? '',
+                    status: blogPost.status ?? 'draft',
+                    publishDate,
+                    featuredImage: blogPost.featuredImage ?? '',
+                    metaTitle: blogPost.metaTitle ?? '',
+                    metaDescription: blogPost.metaDescription ?? '',
+                    tags: blogPost.tags ?? [],
+                    categories: blogPost.categories ?? [],
+                }}
+                key={blogPost.post_id}
                 onSubmit={handleSubmit}
-                title={blogPost.title ?? ''}
-                content={blogPost.content ?? ''}
-                excerpt={blogPost.excerpt ?? ''}
-                status={blogPost.status ?? 'draft'}
-                publishDate={publishDate}
-                featuredImage={blogPost.featuredImage ?? ''}
-                metaTitle={blogPost.metaTitle ?? ''}
-                metaDescription={blogPost.metaDescription ?? ''}
-                tags={blogPost.tags ?? []}
-                categories={blogPost.categories ?? []}
-                // key helps reset editor when route changes (optional)
-                key={slug}
             />
         </div>
     )
